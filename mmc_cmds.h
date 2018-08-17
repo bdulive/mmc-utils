@@ -45,3 +45,5 @@ int do_ffu(int nargs, char **argv);
 int do_read_scr(int argc, char **argv);
 int do_read_cid(int argc, char **argv);
 int do_read_csd(int argc, char **argv);
+int do_lock_unlock(int nargs, char **argv);
+int set_block_len(int fd, int blk_len);

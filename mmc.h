@@ -35,6 +35,19 @@
 #define MMC_CLEAR_WRITE_PROT	29    /* ac   [31:0] data addr   R1b */
 #define MMC_SEND_WRITE_PROT_TYPE 31   /* ac   [31:0] data addr   R1  */
 
+#define MMC_SET_BLOCKLEN 16 /* ac [31:0] block len R1 */
+#define MMC_LOCK_UNLOCK 42 /* adtc R1b */
+#define MMC_CMD42_UNLOCK 0x0 /* UNLOCK */
+#define MMC_CMD42_SET_PWD 0x1 /* SET_PWD */
+#define MMC_CMD42_CLR_PWD 0x2 /* CLR_PWD */
+#define MMC_CMD42_LOCK 0x4 /* LOCK */
+#define MMC_CMD42_SET_LOCK 0x5 /* SET_PWD & LOCK */
+#define MMC_CMD42_ERASE 0x8 /* ERASE */
+#define MAX_PWD_LENGTH 32 /* max PWDS_LEN: old+new */
+#define MMC_BLOCK_SIZE 512 /* data blk size for cmd42 */
+#define MMC_R1_ERROR (1 << 19) /* R1 bit19 */
+#define MMC_R1_LOCK_ULOCK_FAIL (1 << 24) /* R1 bit24 */
+
 /*
  * EXT_CSD fields
  */

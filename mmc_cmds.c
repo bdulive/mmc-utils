@@ -2614,3 +2614,122 @@ out:
 	return ret;
 #endif
 }
+
+//lock/unlock feature implementation
+int do_lock_unlock(int nargs, char **argv)
+{
+	int fd, ret = 0;
+	char *device;
+	__u8 data_block[MMC_BLOCK_SIZE]={0};
+	__u8 data_block_onebyte[1]={0};
+	int block_size = 0;
+	struct mmc_ioc_cmd idata;
+	int cmd42_para; //parameter of cmd42
+	char pwd[MAX_PWD_LENGTH+1]; //password
+	int pwd_len; //password length
+	__u32 r1_response; //R1 response token
+
+	CHECK(nargs != 4, "Usage: mmc cmd42 <password> <s|c|l|u|e> <device>\n", exit(1));
+
+	strcpy(pwd, argv[1]);
+	pwd_len = strlen(pwd);
+
+	if (!strcmp("s", argv[2])) {
+		cmd42_para = MMC_CMD42_SET_PWD;
+		printf("Set password: password=%s ...\n", pwd);
+	}
+	else if (!strcmp("c", argv[2])) {
+		cmd42_para = MMC_CMD42_CLR_PWD;
+		printf("Clear password: password=%s ...\n", pwd);
+	}
+	else if (!strcmp("l", argv[2])) {
+		cmd42_para = MMC_CMD42_LOCK;
+		printf("Lock the card: password=%s ...\n", pwd);
+	}
+	else if (!strcmp("sl", argv[2])) {
+		cmd42_para = MMC_CMD42_SET_LOCK;
+		printf("Set password and lock the card: password - %s ...  \n", pwd);
+	}
+	else if (!strcmp("u", argv[2])) {
+		cmd42_para = MMC_CMD42_UNLOCK;
+		printf("Unlock the card: password=%s ...\n", pwd);
+	}
+	else if (!strcmp("e", argv[2])) {
+		cmd42_para = MMC_CMD42_ERASE;
+		printf("Force erase ... (Warning: all card data will be erased together with PWD!)\n");
+	}
+	else {
+		printf("Invalid parameter:\n" "s\tset password\n" "c \tclear password\n" "l\tlock\n"
+			"sl\tset password and lock\n" "u\tunlock\n" "e \tforce erase\n");
+		exit(1);
+	}
+
+	device = argv[nargs-1];
+
+	fd = open(device, O_RDWR);
+	if (fd < 0) {
+		perror("open");
+		exit(1);
+	}
+
+	if (cmd42_para==MMC_CMD42_ERASE)
+		block_size = 2; //set blk size to 2-byte for Force Erase @DDR50 compability
+	else
+		block_size = MMC_BLOCK_SIZE;
+
+	ret = set_block_len(fd, block_size); //set data block size prior to cmd42
+	printf("Set to data block length = %d byte(s).\n", block_size);
+
+	if (cmd42_para==MMC_CMD42_ERASE) {
+		data_block_onebyte[0] = cmd42_para;
+	} else {
+		data_block[0] = cmd42_para;
+		data_block[1] = pwd_len;
+		memcpy((char *)(data_block+2), pwd, pwd_len);
+	}
+
+	memset(&idata, 0, sizeof(idata));
+	idata.write_flag = 1;
+	idata.opcode = MMC_LOCK_UNLOCK;
+	idata.arg = 0; //set all 0 for cmd42 arg
+	idata.flags = MMC_RSP_R1 | MMC_CMD_AC | MMC_CMD_ADTC;
+	idata.blksz = block_size;
+	idata.blocks = 1;
+
+	if (cmd42_para==MMC_CMD42_ERASE)
+		mmc_ioc_cmd_set_data(idata, data_block_onebyte);
+	else
+		mmc_ioc_cmd_set_data(idata, data_block);
+
+	ret = ioctl(fd, MMC_IOC_CMD, &idata); //Issue CMD42
+
+	r1_response = idata.response[0];
+	printf("cmd42 response: 0x%08x\n", r1_response);
+	if (r1_response & MMC_R1_ERROR) { //check CMD42 error
+		printf("cmd42 error! Error code: 0x%08x\n", r1_response & MMC_R1_ERROR);
+		ret=-1;
+	}
+	if (r1_response & MMC_R1_LOCK_ULOCK_FAIL) { //check lock/unlock error
+		printf("Card lock/unlock fail! Error code: 0x%08x\n", r1_response & MMC_R1_LOCK_ULOCK_FAIL);
+		ret=-1;
+	}
+
+	close(fd);
+	return ret;
+}
+
+//change data block length
+int set_block_len(int fd, int blk_len)
+{
+	int ret = 0;
+	struct mmc_ioc_cmd idata;
+
+	memset(&idata, 0, sizeof(idata));
+	idata.opcode = MMC_SET_BLOCKLEN;
+	idata.arg = blk_len;
+	idata.flags = MMC_RSP_R1 | MMC_CMD_AC;
+
+	ret = ioctl(fd, MMC_IOC_CMD, &idata);
+
+	return ret;
+}

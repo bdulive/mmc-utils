@@ -2629,7 +2629,10 @@ int do_lock_unlock(int nargs, char **argv)
 	int pwd_len; //password length
 	__u32 r1_response; //R1 response token
 
-	CHECK(nargs != 4, "Usage: mmc cmd42 <password> <s|c|l|u|e> <device>\n", exit(1));
+	if (nargs != 4) {
+		fprintf(stderr, "Usage: mmc cmd42 <password> <s|c|l|u|e> <device>\n");
+		exit(1);
+	}
 
 	strcpy(pwd, argv[1]);
 	pwd_len = strlen(pwd);

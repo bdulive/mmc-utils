@@ -2620,12 +2620,12 @@ int do_lock_unlock(int nargs, char **argv)
 {
 	int fd, ret = 0;
 	char *device;
-	__u8 data_block[MMC_BLOCK_SIZE]={0};
-	__u8 data_block_onebyte[1]={0};
+	__u8 data_block[MMC_BLOCK_SIZE] = {0};
+	__u8 data_block_onebyte[1] = {0};
 	int block_size = 0;
 	struct mmc_ioc_cmd idata;
 	int cmd42_para; //parameter of cmd42
-	char pwd[MAX_PWD_LENGTH+1]; //password
+	char pwd[MAX_PWD_LENGTH*2 + 1]; //old+new passwords
 	int pwd_len; //password length
 	__u32 r1_response; //R1 response token
 
@@ -2636,6 +2636,10 @@ int do_lock_unlock(int nargs, char **argv)
 
 	strcpy(pwd, argv[1]);
 	pwd_len = strlen(pwd);
+	if (pwd_len > MAX_PWD_LENGTH) {
+		fprintf(stderr, "The password length is up to 16 bytes.\n");
+		exit(1);
+	}
 
 	if (!strcmp("s", argv[2])) {
 		cmd42_para = MMC_CMD42_SET_PWD;
@@ -2675,7 +2679,7 @@ int do_lock_unlock(int nargs, char **argv)
 		exit(1);
 	}
 
-	if (cmd42_para==MMC_CMD42_ERASE)
+	if (cmd42_para == MMC_CMD42_ERASE)
 		block_size = 2; //set blk size to 2-byte for Force Erase @DDR50 compability
 	else
 		block_size = MMC_BLOCK_SIZE;
@@ -2683,13 +2687,16 @@ int do_lock_unlock(int nargs, char **argv)
 	ret = set_block_len(fd, block_size); //set data block size prior to cmd42
 	printf("Set to data block length = %d byte(s).\n", block_size);
 
-	if (cmd42_para==MMC_CMD42_ERASE) {
+	if (cmd42_para == MMC_CMD42_ERASE) {
 		data_block_onebyte[0] = cmd42_para;
 	} else {
 		data_block[0] = cmd42_para;
 		data_block[1] = pwd_len;
 		memcpy((char *)(data_block+2), pwd, pwd_len);
 	}
+
+	printf("data_block[0]:0x%x, data_block[1]:%d, data_block[2]:%s\n",
+		data_block[0], data_block[1], &data_block[2]);
 
 	memset(&idata, 0, sizeof(idata));
 	idata.write_flag = 1;
@@ -2699,7 +2706,7 @@ int do_lock_unlock(int nargs, char **argv)
 	idata.blksz = block_size;
 	idata.blocks = 1;
 
-	if (cmd42_para==MMC_CMD42_ERASE)
+	if (cmd42_para == MMC_CMD42_ERASE)
 		mmc_ioc_cmd_set_data(idata, data_block_onebyte);
 	else
 		mmc_ioc_cmd_set_data(idata, data_block);

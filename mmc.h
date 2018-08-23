@@ -43,7 +43,7 @@
 #define MMC_CMD42_LOCK 0x4 /* LOCK */
 #define MMC_CMD42_SET_LOCK 0x5 /* SET_PWD & LOCK */
 #define MMC_CMD42_ERASE 0x8 /* ERASE */
-#define MAX_PWD_LENGTH 32 /* max PWDS_LEN: old+new */
+#define MAX_PWD_LENGTH 16 /* The password length is up to 16 bytes */
 #define MMC_BLOCK_SIZE 512 /* data blk size for cmd42 */
 #define MMC_R1_ERROR (1 << 19) /* R1 bit19 */
 #define MMC_R1_LOCK_ULOCK_FAIL (1 << 24) /* R1 bit24 */

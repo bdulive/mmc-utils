@@ -2628,6 +2628,7 @@ int do_lock_unlock(int nargs, char **argv)
 	char pwd[MAX_PWD_LENGTH*2 + 1]; //old+new passwords
 	int pwd_len; //password length
 	__u32 r1_response; //R1 response token
+	__u8 ext_csd[512];
 
 	if (nargs != 4) {
 		fprintf(stderr, "Usage: mmc cmd42 <password> <s|c|l|u|e> <device>\n");
@@ -2678,6 +2679,14 @@ int do_lock_unlock(int nargs, char **argv)
 		perror("open");
 		exit(1);
 	}
+
+#ifndef DANGEROUS_COMMANDS_ENABLED
+	ret = read_extcsd(fd, ext_csd);
+	if (!ret) {
+		fprintf(stderr, "Stop! It's dangerous to perform on eMMC.\n");
+		exit(1);
+	}
+#endif
 
 	if (cmd42_para == MMC_CMD42_ERASE)
 		block_size = 2; //set blk size to 2-byte for Force Erase @DDR50 compability
